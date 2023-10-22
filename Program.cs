@@ -6,7 +6,11 @@ using System.IO;
 
 if (args.Length == 0)
 {
-    Console.WriteLine("Usage: tldr-sharp <command> \n > tldr-sharp curl \n");
+    Console.Write("Usage: tldr-sharp");
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.Write(" <command> \n");
+    Console.ResetColor();
+    Console.WriteLine("> tldr-sharp curl \n");
     return;
 }
 
@@ -22,7 +26,10 @@ if (commandIx.TryGetValue(commandArgument, out var value))
 }
 else
 {
-    Console.WriteLine($"! {commandArgument} no page found found");
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.Write($"{commandArgument} ");
+    Console.ResetColor();
+    Console.Write("page not found \n");
 }
 
 return;
