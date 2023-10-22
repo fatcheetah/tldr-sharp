@@ -4,12 +4,13 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <RootNamespace>tldr_sharp</RootNamespace>
-    <ImplicitUsings>enable</ImplicitUsings>
+<!-- disable implicit for build compatibility with flattened.net -->
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ServerGarbageCollection>false</ServerGarbageCollection>
   </PropertyGroup>
   
-<!--  Single file executable-->
+<!--  Single file executable -->
   <PropertyGroup>
     <PublishReadyToRun>true</PublishReadyToRun>
     <PublishSingleFile>true</PublishSingleFile>
@@ -18,5 +19,10 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
+
+<!--
+bflat/flattened.net (recomended due to reduced app memory footprint and compile size)
+> bflat build Program.cs __os:linux __no-reflection __separate-symbols _Os _o tldr-sharp
+-->
 
 </Project>
