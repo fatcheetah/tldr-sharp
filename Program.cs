@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.IO;
+using System.Net.Http;
+using System.IO.Compression;
 
 if (args.Length == 0)
 {
@@ -16,7 +18,11 @@ if (args.Length == 0)
 
 var commandArgument = args[0];
 
-const string pageLocation = "/home/choc/funnn/tldr-sharp/tldr-pages/pages";
+var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+var pageLocation = $"{baseDirectory}/tldr-main/pages";
+
+DownloadPopulatePagesFromZip();
+
 
 ParseFileNamesToCommandNameIndex(out var commandIx);
 
@@ -33,6 +39,25 @@ else
 }
 
 return;
+
+void DownloadPopulatePagesFromZip()
+{
+    if (Directory.Exists(pageLocation)) return;
+
+    try
+    {
+        // grab the zip from the tldr-pages app
+        var client = new HttpClient();
+        var zipStream = client.GetStreamAsync("https://tldr.inbrowser.app/tldr-pages.zip").Result;
+
+        using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+        archive.ExtractToDirectory(baseDirectory);
+    }
+    catch(Exception ex)
+    {
+        Console.WriteLine(ex);
+    }
+}
 
 void ParseFileNamesToCommandNameIndex(out Dictionary<string, string> commandIndex)
 {
