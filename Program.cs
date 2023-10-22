@@ -56,9 +56,11 @@ void DownloadPopulatePagesFromZip()
     try
     {
         var client = new HttpClient();
+        var zipStream = client.GetStreamAsync("https://github.com/tldr-pages/tldr/archive/refs/tags/v2.0.zip").Result;
 
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
         archive.ExtractToDirectory(baseDirectory);
+        archive.Dispose();
     }
     catch (Exception ex)
     {
