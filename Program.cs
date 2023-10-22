@@ -17,7 +17,7 @@ if (args.Length == 0)
         More information: https://tldr.sh.
          
         - Print the tldr page for a specific command
-        `tldr
+        `tldr-sharp
         """);
     Console.ForegroundColor = ConsoleColor.Yellow;
     Console.Write(" <command>` \n");
