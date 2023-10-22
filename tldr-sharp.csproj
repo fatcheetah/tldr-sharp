@@ -22,7 +22,7 @@
 
 <!--
 bflat/flattened.net (recomended due to reduced app memory footprint and compile size)
-> bflat build Program.cs __os:linux __no-reflection __separate-symbols _Os _o tldr-sharp
+> bflat build Program.cs __os:linux __separate-symbols _Os _o tldr-sharp
 -->
 
 </Project>
