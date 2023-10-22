@@ -5,21 +5,30 @@ using System.Text.RegularExpressions;
 using System.IO;
 using System.Net.Http;
 using System.IO.Compression;
+using System.Linq;
 
 if (args.Length == 0)
 {
-    Console.Write("Usage: tldr-sharp");
+    Console.Write(
+        """
+        tldr-sharp
+         
+        Display simple help pages for command-line tools from the tldr-pages project.
+        More information: https://tldr.sh.
+         
+        - Print the tldr page for a specific command
+        `tldr
+        """);
     Console.ForegroundColor = ConsoleColor.Yellow;
-    Console.Write(" <command> \n");
+    Console.Write(" <command>` \n");
     Console.ResetColor();
-    Console.WriteLine("> tldr-sharp curl \n");
     return;
 }
 
 var commandArgument = args[0];
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-var pageLocation = $"{baseDirectory}/tldr-main/pages";
+var pageLocation = $"{baseDirectory}/tldr-2.0/pages";
 
 DownloadPopulatePagesFromZip();
 
@@ -46,14 +55,12 @@ void DownloadPopulatePagesFromZip()
 
     try
     {
-        // grab the zip from the tldr-pages app
         var client = new HttpClient();
-        var zipStream = client.GetStreamAsync("https://tldr.inbrowser.app/tldr-pages.zip").Result;
 
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
         archive.ExtractToDirectory(baseDirectory);
     }
-    catch(Exception ex)
+    catch (Exception ex)
     {
         Console.WriteLine(ex);
     }
@@ -63,8 +70,27 @@ void ParseFileNamesToCommandNameIndex(out Dictionary<string, string> commandInde
 {
     commandIndex = new Dictionary<string, string>();
     var commandRegex = new Regex(@"\/([^\/]+)\.md$");
-    var list = Directory.EnumerateFiles(pageLocation, "*.md", SearchOption.AllDirectories);
-    foreach (var path in list)
+
+    var common = Directory.EnumerateFiles($"{pageLocation}/common", "*.md", SearchOption.AllDirectories);
+    IEnumerable<string> os;
+
+    switch (Environment.OSVersion.Platform)
+    {
+        case PlatformID.Unix:
+            os = Directory.EnumerateFiles($"{pageLocation}/linux", "*.md", SearchOption.AllDirectories);
+            break;
+        case PlatformID.MacOSX:
+            os = Directory.EnumerateFiles($"{pageLocation}/osx", "*.md", SearchOption.AllDirectories);
+            break;
+        case PlatformID.Other:
+        default:
+            os = Directory.EnumerateFiles($"{pageLocation}/windows", "*.md", SearchOption.AllDirectories);
+            break;
+    }
+
+    var commandList = common.Concat(os);
+
+    foreach (var path in commandList)
     {
         var match = commandRegex.Match(path);
         var result = match.Groups[1].Value;
@@ -81,7 +107,7 @@ void GetContentOfFile(string filePath)
     while (filestream.CanRead)
     {
         var readByte = streamReader.Read();
-        
+
         if (readByte == 123 || readByte == 125) continue; // skip { }
 
         if (readByte == -1) // <EOF>
