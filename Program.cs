@@ -56,6 +56,7 @@ void GetContentOfFile(string filePath)
     while (filestream.CanRead)
     {
         builder.Clear();
+        if (readByte == 123 || readByte == 125) continue; // skip { }
 
         while (true)
         {
