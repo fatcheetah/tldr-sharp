@@ -55,24 +55,18 @@ void GetContentOfFile(string filePath)
 
     while (filestream.CanRead)
     {
-        builder.Clear();
+        var readByte = streamReader.Read();
+        
         if (readByte == 123 || readByte == 125) continue; // skip { }
 
-        while (true)
+        if (readByte == -1) // <EOF>
         {
-            var readByte = streamReader.Read();
-
-            if (readByte == -1) // <EOF>
-            {
-                streamReader.Close();
-                break;
-            }
-
-            builder.Append((char)readByte);
+            filestream.Close();
+            streamReader.Close();
+            break;
         }
 
-        filestream.Close();
-        break;
+        builder.Append((char)readByte);
     }
 
     Console.WriteLine(builder.ToString());
