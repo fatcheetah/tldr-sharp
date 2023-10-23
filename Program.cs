@@ -104,23 +104,51 @@ void GetContentOfFile(string filePath)
 {
     using var filestream = new FileInfo(filePath).Open(FileMode.Open, FileAccess.Read);
     using var streamReader = new StreamReader(filestream);
-    var builder = new StringBuilder();
 
     while (filestream.CanRead)
     {
         var readByte = streamReader.Read();
 
-        if (readByte == 123 || readByte == 125) continue; // skip { }
-
-        if (readByte == -1) // <EOF>
+        switch (readByte)
         {
-            filestream.Close();
-            streamReader.Close();
-            break;
+            case -1:
+                filestream.Close();
+                streamReader.Close();
+                break;
+            case 35:
+                PrintWriteColorToggle(ConsoleColor.Yellow);
+                break;
+            case 60:
+            case 62:
+                PrintWriteAsColor(ConsoleColor.Red, readByte);
+                continue;
+            case 96:
+                PrintWriteColorToggle(ConsoleColor.DarkBlue);
+                break;
+            case 123:
+            case 125:
+                continue;
         }
 
-        builder.Append((char)readByte);
+        Console.Write((char)readByte);
     }
+    Console.Write("\n");
+}
 
-    Console.WriteLine(builder.ToString());
+void PrintWriteAsColor(ConsoleColor foregroundColor, int charCode)
+{
+    Console.ForegroundColor = foregroundColor;
+    Console.Write((char)charCode);
+    Console.ResetColor();
+}
+
+void PrintWriteColorToggle(ConsoleColor foregroundColor)
+{
+    if (Console.ForegroundColor == foregroundColor)
+    {
+        Console.ResetColor();
+        return;
+    } 
+    
+    Console.ForegroundColor = foregroundColor;
 }
