@@ -28,14 +28,13 @@ if (args.Length == 0)
 var commandArgument = args[0];
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-var pageLocation = $"{baseDirectory}/tldr-2.0/pages";
+var pageLocation = $"{baseDirectory}{Path.DirectorySeparatorChar}tldr-2.0{Path.DirectorySeparatorChar}pages";
 
 DownloadPopulatePagesFromZip();
 
+var commandIndex = ParseFileNamesToCommandNameIndex();
 
-ParseFileNamesToCommandNameIndex(out var commandIx);
-
-if (commandIx.TryGetValue(commandArgument, out var value))
+if (commandIndex.TryGetValue(commandArgument, out var value))
 {
     GetContentOfFile(value);
 }
@@ -68,25 +67,23 @@ void DownloadPopulatePagesFromZip()
     }
 }
 
-void ParseFileNamesToCommandNameIndex(out Dictionary<string, string> commandIndex)
+Dictionary<string, string> ParseFileNamesToCommandNameIndex()
 {
-    commandIndex = new Dictionary<string, string>();
-    var commandRegex = new Regex(@"\/([^\/]+)\.md$");
-
-    var common = Directory.EnumerateFiles($"{pageLocation}/common", "*.md", SearchOption.AllDirectories);
+    var index = new Dictionary<string, string>();
+    var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.AllDirectories);
     IEnumerable<string> os;
 
     switch (Environment.OSVersion.Platform)
     {
         case PlatformID.Unix:
-            os = Directory.EnumerateFiles($"{pageLocation}/linux", "*.md", SearchOption.AllDirectories);
+            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}linux", "*.md", SearchOption.AllDirectories);
             break;
         case PlatformID.MacOSX:
-            os = Directory.EnumerateFiles($"{pageLocation}/osx", "*.md", SearchOption.AllDirectories);
+            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}osx", "*.md", SearchOption.AllDirectories);
             break;
         case PlatformID.Other:
         default:
-            os = Directory.EnumerateFiles($"{pageLocation}/windows", "*.md", SearchOption.AllDirectories);
+            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}windows", "*.md", SearchOption.AllDirectories);
             break;
     }
 
@@ -94,10 +91,12 @@ void ParseFileNamesToCommandNameIndex(out Dictionary<string, string> commandInde
 
     foreach (var path in commandList)
     {
-        var match = commandRegex.Match(path);
-        var result = match.Groups[1].Value;
-        commandIndex.TryAdd(result, path);
+        var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
+        var result = path[match..].Replace(".md", string.Empty);
+        index.TryAdd(result, path);
     }
+
+    return index;
 }
 
 void GetContentOfFile(string filePath)
