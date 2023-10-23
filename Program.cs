@@ -109,43 +109,47 @@ void GetContentOfFile(string filePath)
         switch (readByte)
         {
             case -1:
-                filestream.Close();
                 streamReader.Close();
+                filestream.Close();
                 break;
             case 35:
-                PrintWriteColorToggle(ConsoleColor.Yellow);
+                ConsoleColorToggle(ConsoleColor.Yellow);
+                Console.Write((char)readByte);
                 break;
             case 60:
             case 62:
-                PrintWriteAsColor(ConsoleColor.Red, readByte);
+                ConsoleWriteAsColor(ConsoleColor.Red, readByte);
                 continue;
             case 96:
-                PrintWriteColorToggle(ConsoleColor.DarkBlue);
+                ConsoleColorToggle(ConsoleColor.DarkBlue);
+                Console.Write((char)readByte);
                 break;
             case 123:
             case 125:
                 continue;
+            default:
+                Console.Write((char)readByte);
+                break;
         }
-
-        Console.Write((char)readByte);
     }
+
     Console.Write("\n");
 }
 
-void PrintWriteAsColor(ConsoleColor foregroundColor, int charCode)
+void ConsoleWriteAsColor(ConsoleColor foregroundColor, int charCode)
 {
     Console.ForegroundColor = foregroundColor;
     Console.Write((char)charCode);
     Console.ResetColor();
 }
 
-void PrintWriteColorToggle(ConsoleColor foregroundColor)
+void ConsoleColorToggle(ConsoleColor foregroundColor)
 {
     if (Console.ForegroundColor == foregroundColor)
     {
         Console.ResetColor();
         return;
-    } 
+    }
     
     Console.ForegroundColor = foregroundColor;
 }
