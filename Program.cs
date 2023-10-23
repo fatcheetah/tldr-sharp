@@ -108,24 +108,24 @@ void GetContentOfFile(string filePath)
 
         switch (readByte)
         {
-            case -1:
+            case -1: // EOF
                 streamReader.Close();
                 filestream.Close();
                 break;
-            case 35:
+            case 35: // #
                 ConsoleColorToggle(ConsoleColor.Yellow);
                 Console.Write((char)readByte);
                 break;
-            case 60:
-            case 62:
+            case 60: // <
+            case 62: // >
                 ConsoleWriteAsColor(ConsoleColor.Red, readByte);
                 continue;
-            case 96:
+            case 96: // `
                 ConsoleColorToggle(ConsoleColor.DarkBlue);
                 Console.Write((char)readByte);
                 break;
-            case 123:
-            case 125:
+            case 123: // {
+            case 125: // }
                 continue;
             default:
                 Console.Write((char)readByte);
@@ -150,6 +150,6 @@ void ConsoleColorToggle(ConsoleColor foregroundColor)
         Console.ResetColor();
         return;
     }
-    
+
     Console.ForegroundColor = foregroundColor;
 }
