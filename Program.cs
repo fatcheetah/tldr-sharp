@@ -52,8 +52,10 @@ void DownloadPopulatePagesFromZip()
 
     try
     {
+        const string url = "https://github.com/tldr-pages/tldr/archive/refs/tags/v2.0.zip";
+        Console.WriteLine($"Downloading pages from {url} - file size: 5.8M");
         var client = new HttpClient();
-        var zipStream = client.GetStreamAsync("https://github.com/tldr-pages/tldr/archive/refs/tags/v2.0.zip").Result;
+        var zipStream = client.GetStreamAsync(url).Result;
 
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
         archive.ExtractToDirectory(baseDirectory);
