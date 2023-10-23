@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.IO;
-using System.Net.Http;
+﻿using System.Collections.Generic;
 using System.IO.Compression;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System;
 
 if (args.Length == 0)
 {
