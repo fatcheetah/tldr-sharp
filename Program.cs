@@ -29,10 +29,9 @@ var pageLocation = $"{baseDirectory}{Path.DirectorySeparatorChar}tldr-2.0{Path.D
 DownloadPopulatePagesFromZip();
 
 var commandIndex = ParseFileNamesToCommandNameIndex();
-
-if (commandIndex.TryGetValue(commandArgument, out var value))
+if (commandIndex.TryGetValue(commandArgument, out var commandFilePath))
 {
-    GetContentOfFile(value);
+    WriteContentOfFile(commandFilePath);
 }
 else
 {
@@ -84,7 +83,6 @@ Dictionary<string, string> ParseFileNamesToCommandNameIndex()
     }
 
     var commandList = common.Concat(os);
-
     foreach (var path in commandList)
     {
         var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
@@ -95,7 +93,7 @@ Dictionary<string, string> ParseFileNamesToCommandNameIndex()
     return index;
 }
 
-void GetContentOfFile(string filePath)
+void WriteContentOfFile(string filePath)
 {
     using var filestream = new FileInfo(filePath).Open(FileMode.Open, FileAccess.Read);
     using var streamReader = new StreamReader(filestream);
