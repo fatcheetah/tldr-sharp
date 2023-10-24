@@ -26,9 +26,9 @@ var commandArgument = args[0];
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 var pageLocation = $"{baseDirectory}{Path.DirectorySeparatorChar}tldr-2.0{Path.DirectorySeparatorChar}pages";
 
-DownloadPopulatePagesFromZip();
+DownloadPagesFromZip();
+BuildCommandNameIndex(out var commandIndex);
 
-var commandIndex = ParseFileNamesToCommandNameIndex();
 if (commandIndex.TryGetValue(commandArgument, out var commandFilePath))
 {
     WriteContentOfFile(commandFilePath);
@@ -41,7 +41,7 @@ else
 
 return;
 
-void DownloadPopulatePagesFromZip()
+void DownloadPagesFromZip()
 {
     if (Directory.Exists(pageLocation)) return;
 
@@ -62,9 +62,9 @@ void DownloadPopulatePagesFromZip()
     }
 }
 
-Dictionary<string, string> ParseFileNamesToCommandNameIndex()
+void BuildCommandNameIndex(out Dictionary<string, string> index)
 {
-    var index = new Dictionary<string, string>();
+    index = new Dictionary<string, string>();
     var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.AllDirectories);
     IEnumerable<string> os;
 
@@ -89,8 +89,6 @@ Dictionary<string, string> ParseFileNamesToCommandNameIndex()
         var result = path[match..].Replace(".md", string.Empty);
         index.TryAdd(result, path);
     }
-
-    return index;
 }
 
 void WriteContentOfFile(string filePath)
