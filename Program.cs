@@ -17,9 +17,7 @@ if (args.Length == 0)
         - Print the tldr page for a specific command
         `tldr-sharp
         """);
-    Console.ForegroundColor = ConsoleColor.Yellow;
-    Console.Write(" <command>` \n");
-    Console.ResetColor();
+    ConsoleEx.WriteColor(" <command> \n", ConsoleColor.Yellow);
     return;
 }
 
@@ -38,9 +36,7 @@ if (commandIndex.TryGetValue(commandArgument, out var value))
 }
 else
 {
-    Console.ForegroundColor = ConsoleColor.Yellow;
-    Console.Write($"{commandArgument} ");
-    Console.ResetColor();
+    ConsoleEx.WriteColor($"{commandArgument}", ConsoleColor.Yellow);
     Console.Write("page not found \n");
 }
 
@@ -115,15 +111,15 @@ void GetContentOfFile(string filePath)
                 filestream.Close();
                 break;
             case 35: // #
-                ConsoleColorToggle(ConsoleColor.Yellow);
+                ConsoleEx.ColorToggle(ConsoleColor.Yellow);
                 Console.Write((char)readByte);
                 break;
             case 60: // <
             case 62: // >
-                ConsoleWriteAsColor(ConsoleColor.Red, readByte);
+                ConsoleEx.WriteColor(readByte, ConsoleColor.Red);
                 continue;
             case 96: // `
-                ConsoleColorToggle(ConsoleColor.DarkBlue);
+                ConsoleEx.ColorToggle(ConsoleColor.DarkBlue);
                 Console.Write((char)readByte);
                 break;
             case 123: // {
@@ -138,20 +134,30 @@ void GetContentOfFile(string filePath)
     Console.Write("\n");
 }
 
-void ConsoleWriteAsColor(ConsoleColor foregroundColor, int charCode)
+public static class ConsoleEx
 {
-    Console.ForegroundColor = foregroundColor;
-    Console.Write((char)charCode);
-    Console.ResetColor();
-}
-
-void ConsoleColorToggle(ConsoleColor foregroundColor)
-{
-    if (Console.ForegroundColor == foregroundColor)
+    public static void WriteColor(int write, ConsoleColor foregroundColor)
     {
+        Console.ForegroundColor = foregroundColor;
+        Console.Write((char)write);
         Console.ResetColor();
-        return;
     }
 
-    Console.ForegroundColor = foregroundColor;
+    public static void WriteColor(string write, ConsoleColor foregroundColor)
+    {
+        Console.ForegroundColor = foregroundColor;
+        Console.Write(write);
+        Console.ResetColor();
+    }
+
+    public static void ColorToggle(ConsoleColor foregroundColor)
+    {
+        if (Console.ForegroundColor == foregroundColor)
+        {
+            Console.ResetColor();
+            return;
+        }
+
+        Console.ForegroundColor = foregroundColor;
+    }
 }
