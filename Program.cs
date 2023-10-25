@@ -35,7 +35,7 @@ if (commandIndex.TryGetValue(commandArgument, out var commandFilePath))
 }
 else
 {
-    ConsoleEx.WriteColor($"{commandArgument}", ConsoleColor.Yellow);
+    ConsoleEx.WriteColor($"{commandArgument} ", ConsoleColor.Yellow);
     Console.Write("page not found \n");
 }
 
