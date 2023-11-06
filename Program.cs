@@ -207,6 +207,8 @@ void WriteContentOfFile(string filePath)
     using var filestream = new FileInfo(filePath).Open(FileMode.Open, FileAccess.Read);
     using var streamReader = new StreamReader(filestream);
 
+    var firstLine = true;
+    var inCodeBlock = false;
     while (filestream.CanRead)
     {
         var readByte = streamReader.Read();
@@ -217,23 +219,40 @@ void WriteContentOfFile(string filePath)
                 streamReader.Close();
                 filestream.Close();
                 break;
-            case 35: // #
-                ConsoleEx.ColorToggle(ConsoleColor.Yellow);
-                Console.Write((char)readByte);
+            case 10:
+                firstLine = false;
+                ConsoleEx.Write(readByte);
+                break;
+            case 58: // :
+                ConsoleEx.Write(readByte);
+                if (streamReader.Peek() == 10)
+                {
+                    streamReader.Read();
+                }
                 break;
             case 60: // <
             case 62: // >
                 ConsoleEx.WriteColor(readByte, ConsoleColor.Red);
                 continue;
             case 96: // `
-                ConsoleEx.ColorToggle(ConsoleColor.DarkBlue);
-                Console.Write((char)readByte);
+                inCodeBlock ^= true;
+                ConsoleEx.WriteColor(readByte, ConsoleColor.DarkBlue);
                 break;
             case 123: // {
             case 125: // }
                 continue;
             default:
-                Console.Write((char)readByte);
+                if (firstLine)
+                {
+                    ConsoleEx.WriteColor(readByte, ConsoleColor.Yellow);
+                    break;
+                }
+                if (inCodeBlock)
+                {
+                    ConsoleEx.WriteColor(readByte, ConsoleColor.DarkBlue);
+                    break;
+                }
+                ConsoleEx.Write(readByte);
                 break;
         }
     }
@@ -243,6 +262,11 @@ void WriteContentOfFile(string filePath)
 
 public static class ConsoleEx
 {
+    public static void Write(int write)
+    {
+        Console.Write((char)write);
+    }
+
     public static void WriteColor(int write, ConsoleColor foregroundColor)
     {
         Console.ForegroundColor = foregroundColor;
