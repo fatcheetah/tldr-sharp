@@ -11,21 +11,26 @@ var pageLocation = $"{baseDirectory}{Path.DirectorySeparatorChar}tldr-2.0{Path.D
 if (args.Any())
     switch (args[0])
     {
+        case "-v":
         case "--version":
             Console.WriteLine("2311.06");
             return;
+        case "-l":
         case "--list":
             CheckDownloadPagesZip();
             GetListOfPlatformCommands();
             break;
+        case "-la":
         case "--list-all":
             CheckDownloadPagesZip();
             GetListOfCommands();
             break;
+        case "-r":
         case "--random":
             CheckDownloadPagesZip();
             GetRandomCommand();
             break;
+        case "-h":
         case "--help":
             WriteHelp();
             break;
@@ -57,11 +62,11 @@ void WriteHelp()
     ConsoleEx.WriteColor("`\n\n", ConsoleColor.DarkBlue);
     Console.Write(
         """
-        --version           Display Version
-        --list              List all commands for current platform
-        --list-all          List all commands for any platform
-        --random            Show a random command
-        --help              Show this information
+        -v,  --version           Display Version
+        -l,  --list              List all commands for current platform
+        -la, --list-all          List all commands for any platform
+        -r,  --random            Show a random command
+        -h,  --help              Show this information
         """);
     Console.Write("\n");
 }
