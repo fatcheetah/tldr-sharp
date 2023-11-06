@@ -5,33 +5,75 @@ using System.Linq;
 using System.Net.Http;
 using System;
 
-if (args.Length == 0)
-{
-    Console.Write(
-        """
-        tldr-sharp
-         
-        Display simple help pages for command-line tools from the tldr-pages project.
-        More information: https://tldr.sh.
-         
-        - Print the tldr page for a specific command
-        `tldr-sharp
-        """);
-    ConsoleEx.WriteColor(" <command> \n", ConsoleColor.Yellow);
-    return;
-}
-
-var commandArgument = args[0];
-
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 var pageLocation = $"{baseDirectory}{Path.DirectorySeparatorChar}tldr-2.0{Path.DirectorySeparatorChar}pages";
 
-DownloadPagesFromZip();
-BuildSearchCommandNames(commandArgument);
+if (args.Any())
+    switch (args[0])
+    {
+        case "--version":
+            Console.WriteLine("2311.06");
+            return;
+        case "--list":
+            CheckDownloadPagesZip();
+            GetListOfPlatformCommands();
+            break;
+        case "--list-all":
+            CheckDownloadPagesZip();
+            GetListOfCommands();
+            break;
+        case "--random":
+            CheckDownloadPagesZip();
+            GetRandomCommand();
+            break;
+        case "--help":
+            WriteHelp();
+            break;
+        default:
+            CheckDownloadPagesZip();
+            GetCommand(args[0]);
+            break;
+    }
+else
+{
+    WriteHelp();
+}
 
 return;
 
-void DownloadPagesFromZip()
+void WriteHelp()
+{
+
+    Console.Write(
+        """
+                tldr-sharp
+                
+                Display simple help pages for command-line tools from the tldr-pages project.
+                More information: https://tldr.sh.
+                
+                - Print the tldr page for a specific command
+                `tldr-sharp
+        """);
+    ConsoleEx.WriteColor(" <command>` \n\n", ConsoleColor.Yellow);
+    Console.Write(
+        """
+                --version           Display Version
+                --list              List all commands for current platform
+                --list-all          List all commands for any platform
+                --random            Show a random command
+                --help              Show this information
+        """
+    );
+}
+
+
+void GetCommand(string command)
+{
+    BuildSearchCommandNames(command);
+    return;
+}
+
+void CheckDownloadPagesZip()
 {
     if (Directory.Exists(pageLocation)) return;
 
@@ -92,6 +134,72 @@ void BuildSearchCommandNames(string commandName)
 
     ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
     Console.WriteLine("not found");
+}
+
+void GetListOfPlatformCommands()
+{
+    var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.TopDirectoryOnly);
+
+    IEnumerable<string> os;
+    switch (Environment.OSVersion.Platform)
+    {
+        case PlatformID.Unix:
+            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}linux", "*.md", SearchOption.TopDirectoryOnly);
+            break;
+        case PlatformID.MacOSX:
+            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}osx", "*.md", SearchOption.TopDirectoryOnly);
+            break;
+        case PlatformID.Other:
+        default:
+            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}windows", "*.md", SearchOption.TopDirectoryOnly);
+            break;
+    }
+
+    var commandList = common.Concat(os);
+    foreach (var path in commandList)
+    {
+        var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
+        var result = path[match..].Replace(".md", string.Empty);
+        ConsoleEx.WriteColor($"{result}, ", ConsoleColor.Yellow);
+    }
+    Console.Write("\n");
+}
+
+void GetListOfCommands()
+{
+    var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.TopDirectoryOnly);
+    var linux = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}linux", "*.md", SearchOption.TopDirectoryOnly);
+    var osx = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}osx", "*.md", SearchOption.TopDirectoryOnly);
+    var windows = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}windows", "*.md", SearchOption.TopDirectoryOnly);
+    var commandList = common.Concat(linux).Concat(osx).Concat(windows);
+
+    foreach (var path in commandList)
+    {
+        var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
+        var result = path[match..].Replace(".md", string.Empty);
+        ConsoleEx.WriteColor($"{result}, ", ConsoleColor.Yellow);
+    }
+    Console.Write("\n");
+}
+
+void GetRandomCommand()
+{
+    var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.TopDirectoryOnly);
+    var linux = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}linux", "*.md", SearchOption.TopDirectoryOnly);
+    var osx = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}osx", "*.md", SearchOption.TopDirectoryOnly);
+    var windows = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}windows", "*.md", SearchOption.TopDirectoryOnly);
+    var commandList = common.Concat(linux).Concat(osx).Concat(windows).ToList();
+
+    var totalCommands = commandList.Count();
+    var random = new Random();
+    var randomIndex = random.Next(totalCommands);
+
+    var path = commandList[randomIndex];
+
+    var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
+    var result = path[match..].Replace(".md", string.Empty);
+    WriteContentOfFile(path);
+    Console.Write("\n");
 }
 
 void WriteContentOfFile(string filePath)
