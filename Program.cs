@@ -46,24 +46,24 @@ void WriteHelp()
 
     Console.Write(
         """
-                tldr-sharp
-                
-                Display simple help pages for command-line tools from the tldr-pages project.
-                More information: https://tldr.sh.
-                
-                - Print the tldr page for a specific command
-                `tldr-sharp
+        tldr-sharp
+        
+        Display simple help pages for command-line tools from the tldr-pages project.
+        More information: https://tldr.sh.
+        
+        - Print the tldr page for a specific command
+        `tldr-sharp
         """);
     ConsoleEx.WriteColor(" <command>` \n\n", ConsoleColor.Yellow);
     Console.Write(
         """
-                --version           Display Version
-                --list              List all commands for current platform
-                --list-all          List all commands for any platform
-                --random            Show a random command
-                --help              Show this information
-        """
-    );
+        --version           Display Version
+        --list              List all commands for current platform
+        --list-all          List all commands for any platform
+        --random            Show a random command
+        --help              Show this information
+        """);
+    Console.Write("\n");
 }
 
 
