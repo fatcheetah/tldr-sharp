@@ -43,18 +43,18 @@ return;
 
 void WriteHelp()
 {
-
+    ConsoleEx.WriteColor("# tldr-sharp\n\n", ConsoleColor.Yellow);
     Console.Write(
         """
-        tldr-sharp
-        
         Display simple help pages for command-line tools from the tldr-pages project.
         More information: https://tldr.sh.
         
         - Print the tldr page for a specific command
-        `tldr-sharp
+
         """);
-    ConsoleEx.WriteColor(" <command>` \n\n", ConsoleColor.Yellow);
+    ConsoleEx.WriteColor("`tldr-sharp ", ConsoleColor.DarkBlue);
+    ConsoleEx.WriteColor("<command>", ConsoleColor.Yellow);
+    ConsoleEx.WriteColor("`\n\n", ConsoleColor.DarkBlue);
     Console.Write(
         """
         --version           Display Version
@@ -65,7 +65,6 @@ void WriteHelp()
         """);
     Console.Write("\n");
 }
-
 
 void GetCommand(string command)
 {
