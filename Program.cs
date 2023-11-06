@@ -203,7 +203,6 @@ void GetRandomCommand()
     var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
     var result = path[match..].Replace(".md", string.Empty);
     WriteContentOfFile(path);
-    Console.Write("\n");
 }
 
 void WriteContentOfFile(string filePath)
