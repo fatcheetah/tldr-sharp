@@ -1,0 +1,2 @@
+flattened.net build script
+> bflat build Program.cs --no-stacktrace-data --no-globalization --no-exception-messages -Ot --no-pie --separate-symbols -o tldr-sharp
