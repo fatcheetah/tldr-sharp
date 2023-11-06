@@ -155,7 +155,7 @@ void GetListOfPlatformCommands()
             break;
     }
 
-    var commandList = common.Concat(os);
+    var commandList = common.Concat(os).OrderBy(cl => cl);
     foreach (var path in commandList)
     {
         var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
@@ -171,7 +171,7 @@ void GetListOfCommands()
     var linux = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}linux", "*.md", SearchOption.TopDirectoryOnly);
     var osx = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}osx", "*.md", SearchOption.TopDirectoryOnly);
     var windows = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}windows", "*.md", SearchOption.TopDirectoryOnly);
-    var commandList = common.Concat(linux).Concat(osx).Concat(windows);
+    var commandList = common.Concat(linux).Concat(osx).Concat(windows).OrderBy(cl => cl);
 
     foreach (var path in commandList)
     {
