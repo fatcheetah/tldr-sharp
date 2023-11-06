@@ -27,17 +27,7 @@ var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 var pageLocation = $"{baseDirectory}{Path.DirectorySeparatorChar}tldr-2.0{Path.DirectorySeparatorChar}pages";
 
 DownloadPagesFromZip();
-BuildCommandNameIndex(out var commandIndex);
-
-if (commandIndex.TryGetValue(commandArgument, out var commandFilePath))
-{
-    WriteContentOfFile(commandFilePath);
-}
-else
-{
-    ConsoleEx.WriteColor($"{commandArgument} ", ConsoleColor.Yellow);
-    Console.Write("page not found \n");
-}
+BuildSearchCommandNames(commandArgument);
 
 return;
 
@@ -62,33 +52,46 @@ void DownloadPagesFromZip()
     }
 }
 
-void BuildCommandNameIndex(out Dictionary<string, string> index)
+void BuildSearchCommandNames(string commandName)
 {
-    index = new Dictionary<string, string>();
-    var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.AllDirectories);
-    IEnumerable<string> os;
+    var commandSearch = $"{commandName}.md";
 
-    switch (Environment.OSVersion.Platform)
+    try
     {
-        case PlatformID.Unix:
-            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}linux", "*.md", SearchOption.AllDirectories);
-            break;
-        case PlatformID.MacOSX:
-            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}osx", "*.md", SearchOption.AllDirectories);
-            break;
-        case PlatformID.Other:
-        default:
-            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}windows", "*.md", SearchOption.AllDirectories);
-            break;
+        var commonPath = $"{pageLocation}{Path.DirectorySeparatorChar}common{Path.DirectorySeparatorChar}{commandSearch}";
+        WriteContentOfFile(commonPath);
+        return;
+    }
+    catch
+    {
     }
 
-    var commandList = common.Concat(os);
-    foreach (var path in commandList)
+    try
     {
-        var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
-        var result = path[match..].Replace(".md", string.Empty);
-        index.TryAdd(result, path);
+        switch (Environment.OSVersion.Platform)
+        {
+            case PlatformID.Unix:
+                var linuxPath = $"{pageLocation}{Path.DirectorySeparatorChar}linux{Path.DirectorySeparatorChar}{commandSearch}";
+                WriteContentOfFile(linuxPath);
+                break;
+            case PlatformID.MacOSX:
+                var osxPath = $"{pageLocation}{Path.DirectorySeparatorChar}osx{Path.DirectorySeparatorChar}{commandSearch}";
+                WriteContentOfFile(osxPath);
+                break;
+            case PlatformID.Other:
+            default:
+                var winPath = $"{pageLocation}{Path.DirectorySeparatorChar}windows{Path.DirectorySeparatorChar}{commandSearch}";
+                WriteContentOfFile(winPath);
+                break;
+        }
+        return;
     }
+    catch
+    {
+    }
+
+    ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
+    Console.WriteLine("not found");
 }
 
 void WriteContentOfFile(string filePath)
