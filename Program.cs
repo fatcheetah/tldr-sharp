@@ -171,11 +171,14 @@ void ListCommands()
     }
     finally
     {
+        var sb = new StringBuilder();
         foreach (var cmd in list)
         {
-            ConsoleEx.WriteColor($"{cmd}, ", ConsoleColor.Yellow);
+            sb.Append($"{cmd}, ");
         }
-        Console.Write("\n");
+        ConsoleEx.ColorToggle(ConsoleColor.Yellow);
+        Console.WriteLine($"{sb}\n");
+        ConsoleEx.ColorToggle(ConsoleColor.Yellow);
     }
 }
 
