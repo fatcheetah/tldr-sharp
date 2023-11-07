@@ -211,8 +211,10 @@ void WriteContentOfFile(string value)
     var bytes = Encoding.UTF8.GetBytes(value);
     var firstLine = true;
     var inCodeBlock = false;
-    foreach (var character in value)
+    var count = 0;
+    for (int i = 0; i < value.Length; i++)
     {
+        var character = value[i];
         switch (character)
         {
             case (char)10:
@@ -221,10 +223,7 @@ void WriteContentOfFile(string value)
                 break;
             case (char)58: // :
                 ConsoleEx.Write(character);
-                // if (contents.Peek() == 10)
-                // {
-                //     contents.Read();
-                // }
+                if (value[i + 1] == (char)10) i++; 
                 break;
             case (char)60: // <
             case (char)62: // >
