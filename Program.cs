@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System;
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -29,6 +30,11 @@ if (args.Any())
         case "--random":
             CheckDownloadPagesZip();
             GetRandomCommand();
+            break;
+        case "-b":
+        case "--binary":
+            CheckDownloadPagesZip();
+            StorePagesAsBinary();
             break;
         case "-h":
         case "--help":
@@ -88,12 +94,76 @@ void CheckDownloadPagesZip()
         var zipStream = client.GetStreamAsync(url).Result;
 
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+        // TODO: only get pages archive 8mb to 1.5mb
         archive.ExtractToDirectory(baseDirectory);
         archive.Dispose();
     }
     catch (Exception ex)
     {
         Console.WriteLine(ex);
+    }
+}
+
+void StorePagesAsBinary()
+{
+    if (!File.Exists("binarypages.dat"))
+    {
+        var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.TopDirectoryOnly).ToList();
+
+        using var memoryStream = new MemoryStream();
+        using var writer = new BinaryWriter(memoryStream, Encoding.UTF8, false);
+
+        common.ForEach(path =>
+        {
+            // get page values and make index name
+            var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
+            var keyName = path[match..].Replace(".md", string.Empty);
+
+            // contents of page
+            using var filestream = new FileInfo(path).Open(FileMode.Open, FileAccess.Read);
+            using var streamReader = new StreamReader(filestream);
+            string contents = streamReader.ReadToEnd();
+
+            // write to binary
+            writer.Write(keyName); // string
+            writer.Write(contents); // string
+        });
+
+        // compress contents to binary file
+        using var compressStream = File.Open("binarypages.dat", FileMode.Create);
+        using var compresser = new BrotliStream(compressStream, compressionLevel: CompressionLevel.Fastest);
+
+        memoryStream.Position = 0;                  // move position from end to start
+        memoryStream.CopyTo(compresser);            // copy contents to the compressStream
+        compresser.Close();                         // close the compressStream
+    }
+
+    // access contents of binary file
+    using var compressFile = File.Open("binarypages.dat", FileMode.Open);
+    using var decompressor = new BrotliStream(compressFile, CompressionMode.Decompress);
+    using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
+
+    // return tuples into returned index
+    var returnedIndex = new Dictionary<string, string>();
+    while (true)
+    {
+        try
+        {
+            returnedIndex.Add(
+                    reader.ReadString(),
+                    reader.ReadString()
+                    );
+
+            if (returnedIndex.ContainsKey("zsh"))
+            {
+                Console.WriteLine(returnedIndex["zsh"]);
+                return;
+            }
+        }
+        catch
+        {
+            break;
+        }
     }
 }
 
