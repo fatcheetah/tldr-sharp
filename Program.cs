@@ -107,7 +107,6 @@ void DownloadPagesZipDeflateContents()
             writer.Write(contents);
         }
 
-        // compress contents to binary file
         using var compressStream = File.Open(dataLocation, FileMode.Create);
         using var compresser = new BrotliStream(compressStream, compressionLevel: CompressionLevel.Fastest);
 
@@ -128,6 +127,7 @@ void GetCommand(string commandName)
     using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
     using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
 
+    bool commandFound = false;
     try
     {
         while (true)
@@ -137,6 +137,7 @@ void GetCommand(string commandName)
 
             if (key == commandName)
             {
+                commandFound = true;
                 WriteContentOfFile(value);
                 return;
             }
@@ -145,6 +146,14 @@ void GetCommand(string commandName)
     catch (EndOfStreamException)
     {
         return;
+    }
+    finally 
+    {
+        if (!commandFound) 
+        {
+            ConsoleEx.WriteColor($"{commandName} ",ConsoleColor.Yellow);
+            Console.Write("not found \n");
+        }
     }
 }
 
@@ -226,7 +235,7 @@ void WriteContentOfFile(string value)
                 break;
             case (char)58: // :
                 ConsoleEx.Write(character);
-                if (value[i + 1] == (char)10) i++; 
+                if (value[i + 1] == (char)10) i++;
                 break;
             case (char)60: // <
             case (char)62: // >
