@@ -17,11 +17,11 @@ if (args.Any())
         case "--version":
             Console.WriteLine("2311.07");
             return;
-        // case "-l":
-        // case "--list":
-        //     DownloadPagesZipDeflateContents();
-        //     GetListOfPlatformCommands();
-        //     break;
+        case "-l":
+        case "--list":
+            DownloadPagesZipDeflateContents();
+            ListCommands();
+            break;
         case "-r":
         case "--random":
             DownloadPagesZipDeflateContents();
@@ -144,6 +144,36 @@ void GetCommand(string commandName)
     catch (EndOfStreamException)
     {
         return;
+    }
+}
+
+void ListCommands()
+{
+    using var dataFile = File.Open(dataLocation, FileMode.Open);
+    using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
+    using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
+
+    var list = new SortedSet<string>();
+    try
+    {
+        while (true)
+        {
+            var cmd = reader.ReadString();
+            list.Add(cmd);
+
+            reader.ReadString();
+        }
+    }
+    catch (EndOfStreamException)
+    {
+        return;
+    }
+    finally
+    {
+        foreach (var cmd in list)
+        {
+            ConsoleEx.WriteColor($"{cmd}, ", ConsoleColor.Yellow);
+        }
     }
 }
 
