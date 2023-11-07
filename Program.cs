@@ -74,7 +74,6 @@ void WriteHelp()
 void GetCommand(string command)
 {
     BuildSearchCommandNames(command);
-    return;
 }
 
 void CheckDownloadPagesZip()
