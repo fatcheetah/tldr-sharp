@@ -80,7 +80,7 @@ void DownloadPagesZipDeflateContents()
 
         using var archive = new ZipArchive(httpStream, ZipArchiveMode.Read);
         using var memoryStream = new MemoryStream();
-        using var writer = new BinaryWriter(memoryStream, Encoding.UTF8, false);
+        using var writer = new BinaryWriter(memoryStream, Encoding.UTF8, true);
 
         var osPath = Environment.OSVersion.Platform switch
         {
@@ -95,6 +95,8 @@ void DownloadPagesZipDeflateContents()
         var osEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}{osPath}{Path.DirectorySeparatorChar}"));
         var entries = commonEntries.Concat(osEntries);
 
+        var keys = new StringBuilder();
+
         foreach (var entry in entries)
         {
             var match = entry.FullName.LastIndexOf(Path.DirectorySeparatorChar) + 1;
@@ -103,9 +105,13 @@ void DownloadPagesZipDeflateContents()
             using var streamReader = new StreamReader(entry.Open());
             string contents = streamReader.ReadToEnd();
 
+            keys.Append($"{keyName},");
             writer.Write(keyName);
             writer.Write(contents);
         }
+
+        writer.Seek(0, SeekOrigin.Begin);  // this does prepend and shift the writer
+        writer.Write(keys.ToString());
 
         using var compressStream = File.Open(dataLocation, FileMode.Create);
         using var compresser = new BrotliStream(compressStream, compressionLevel: CompressionLevel.Optimal);
@@ -127,7 +133,18 @@ void GetCommand(string commandName)
     using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
     using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
 
-    bool commandFound = false;
+    var commandKeys = reader.ReadString()
+        .Split(",")
+        .OrderBy(c => c)
+        .ToList();
+
+    if (!commandKeys.Contains(commandName))
+    {
+        ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
+        Console.Write("not found \n");
+        return;
+    }
+
     try
     {
         while (true)
@@ -137,7 +154,6 @@ void GetCommand(string commandName)
 
             if (key == commandName)
             {
-                commandFound = true;
                 WriteContentOfFile(value);
                 return;
             }
@@ -147,14 +163,6 @@ void GetCommand(string commandName)
     {
         return;
     }
-    finally
-    {
-        if (!commandFound)
-        {
-            ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
-            Console.Write("not found \n");
-        }
-    }
 }
 
 void ListCommands()
@@ -163,32 +171,19 @@ void ListCommands()
     using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
     using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
 
-    var list = new SortedSet<string>();
-    try
-    {
-        while (true)
-        {
-            var cmd = reader.ReadString();
-            list.Add(cmd);
+    var commandKeys = reader.ReadString()
+        .Split(",")
+        .OrderBy(c => c)
+        .ToList();
 
-            reader.ReadString();
-        }
-    }
-    catch (EndOfStreamException)
+    var sb = new StringBuilder();
+    foreach (var cmd in commandKeys)
     {
-        return;
+        sb.Append($"{cmd}, ");
     }
-    finally
-    {
-        var sb = new StringBuilder();
-        foreach (var cmd in list)
-        {
-            sb.Append($"{cmd}, ");
-        }
-        ConsoleEx.ColorToggle(ConsoleColor.Yellow);
-        Console.WriteLine($"{sb}\n");
-        ConsoleEx.ColorToggle(ConsoleColor.Yellow);
-    }
+    ConsoleEx.ColorToggle(ConsoleColor.Yellow);
+    Console.WriteLine($"{sb}\n");
+    ConsoleEx.ColorToggle(ConsoleColor.Yellow);
 }
 
 void GetRandomCommand()
@@ -197,25 +192,31 @@ void GetRandomCommand()
     using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
     using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
 
-    var list = new List<(string key, string value)>();
+    var commandKeys = reader.ReadString()
+        .Split(",")
+        .OrderBy(c => c)
+        .ToList();
+
+    var index = new Random().Next(commandKeys.Count);
+    var commandName = commandKeys[index];
+
     try
     {
         while (true)
         {
             var key = reader.ReadString();
             var value = reader.ReadString();
-            list.Add((key, value));
+
+            if (key == commandName)
+            {
+                WriteContentOfFile(value);
+                return;
+            }
         }
     }
     catch (EndOfStreamException)
     {
         return;
-    }
-    finally
-    {
-        var index = new Random().Next(list.Count);
-        var command = list[index];
-        WriteContentOfFile(command.value);
     }
 }
 
