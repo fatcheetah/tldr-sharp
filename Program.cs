@@ -174,6 +174,7 @@ void ListCommands()
         {
             ConsoleEx.WriteColor($"{cmd}, ", ConsoleColor.Yellow);
         }
+        Console.Write("\n");
     }
 }
 
