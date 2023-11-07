@@ -1,11 +1,11 @@
-﻿using System.IO.Compression;
-using System.IO;
-using System.Linq;
+﻿using System.Text;
 using System.Net.Http;
-using System.Text;
-using System;
-using System.Collections.Generic;
+using System.Linq;
+using System.IO.Compression;
+using System.IO;
 using System.Data;
+using System.Collections.Generic;
+using System;
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 var dataLocation = $"{baseDirectory}pages.dat";
@@ -147,11 +147,11 @@ void GetCommand(string commandName)
     {
         return;
     }
-    finally 
+    finally
     {
-        if (!commandFound) 
+        if (!commandFound)
         {
-            ConsoleEx.WriteColor($"{commandName} ",ConsoleColor.Yellow);
+            ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
             Console.Write("not found \n");
         }
     }
