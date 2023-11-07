@@ -110,10 +110,10 @@ void DownloadPagesZipDeflateContents()
         using var compressStream = File.Open(dataLocation, FileMode.Create);
         using var compresser = new BrotliStream(compressStream, compressionLevel: CompressionLevel.Fastest);
 
-        memoryStream.Position = 0;                  // move position from end to start
-        memoryStream.CopyTo(compresser);            // compress the memory stream
-        compresser.Dispose();                       // close the compresser
-        archive.Dispose();                          // close the archive
+        memoryStream.Position = 0;
+        memoryStream.CopyTo(compresser);
+        compresser.Dispose();
+        archive.Dispose();
     }
     catch (Exception ex)
     {
