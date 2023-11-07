@@ -212,7 +212,6 @@ void WriteContentOfFile(string value)
     var bytes = Encoding.UTF8.GetBytes(value);
     var firstLine = true;
     var inCodeBlock = false;
-    var count = 0;
     for (int i = 0; i < value.Length; i++)
     {
         var character = value[i];
