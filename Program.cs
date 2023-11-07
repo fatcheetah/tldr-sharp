@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System;
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-var dataLocation = $"{baseDirectory}pages.dat";
+var dataLocation = $"{baseDirectory}tldr-sharp.dat";
 
 if (args.Any())
     switch (args[0])
