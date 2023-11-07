@@ -82,7 +82,7 @@ void DownloadPagesZipDeflateContents()
         using var memoryStream = new MemoryStream();
         using var writer = new BinaryWriter(memoryStream, Encoding.UTF8, false);
 
-        var osName = Environment.OSVersion.Platform switch
+        var osPath = Environment.OSVersion.Platform switch
         {
             PlatformID.Unix => "linux",
             PlatformID.MacOSX => "osx",
@@ -90,8 +90,9 @@ void DownloadPagesZipDeflateContents()
             _ => "windows",
         };
 
-        var commonEntries = archive.Entries.Where(e => e.FullName.StartsWith($"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}common{Path.DirectorySeparatorChar}"));
-        var osEntries = archive.Entries.Where(e => e.FullName.StartsWith($"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}common{Path.DirectorySeparatorChar}"));
+        var pagePath = $"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}";
+        var commonEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}"));
+        var osEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}{osPath}{Path.DirectorySeparatorChar}"));
         var entries = commonEntries.Concat(osEntries);
 
         foreach (var entry in entries)
