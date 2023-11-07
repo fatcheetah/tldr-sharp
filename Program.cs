@@ -169,7 +169,7 @@ void GetRandomCommand()
     }
     finally
     {
-        var index = new Random().Next(list.Count());
+        var index = new Random().Next(list.Count);
         var command = list[index];
         WriteContentOfFile(command.value);
     }
