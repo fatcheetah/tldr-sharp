@@ -148,6 +148,7 @@ void GetCommand(string commandName)
         {
             ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
             Console.Write("not found \n");
+            return;
         }
 
         while (true)
