@@ -4,7 +4,6 @@ using System.Linq;
 using System.IO.Compression;
 using System.IO;
 using System.Data;
-using System.Collections.Generic;
 using System;
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -139,19 +138,18 @@ void GetCommand(string commandName)
     using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
     using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
 
-    var commandIndexes = reader.ReadString()
-        .Split(",")
-        .OrderBy(ci => ci)
-        .ToList();
-
-    if (!commandIndexes.Contains(commandName))
-    {
-        ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
-        Console.Write("not found \n");
-    }
-
     try
     {
+        var commandIndexes = reader.ReadString()
+            .Split(",")
+            .OrderBy(ci => ci);
+
+        if (!commandIndexes.Contains(commandName))
+        {
+            ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
+            Console.Write("not found \n");
+        }
+
         while (true)
         {
             var key = reader.ReadString();
@@ -203,25 +201,30 @@ void GetRandomCommand()
     using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
     using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
 
-    var list = new List<(string key, string value)>();
     try
     {
+        var commandIndexes = reader.ReadString()
+            .Split(",")
+            .OrderBy(ci => ci)
+            .ToList();
+
+        var index = new Random().Next(commandIndexes.Count);
+        var command = commandIndexes[index];
+
         while (true)
         {
             var key = reader.ReadString();
             var value = reader.ReadString();
-            list.Add((key, value));
+
+            if (key == command)
+            {
+                WriteContentOfFile(value);
+            }
         }
     }
     catch (EndOfStreamException)
     {
         return;
-    }
-    finally
-    {
-        var index = new Random().Next(list.Count);
-        var command = list[index];
-        WriteContentOfFile(command.value);
     }
 }
 
