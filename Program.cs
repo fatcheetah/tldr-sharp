@@ -181,11 +181,13 @@ void ListCommands()
             .OrderBy(ci => ci)
             .ToList();
 
+        var commandBuilder = new StringBuilder();
         commandIndexes.ForEach(cmd =>
         {
-            ConsoleEx.WriteColor(cmd, ConsoleColor.Yellow);
-            Console.Write(",");
+            commandBuilder.Append($"{cmd},");
         });
+
+        ConsoleEx.WriteColor(commandBuilder.ToString(), ConsoleColor.Yellow);
         Console.Write("\n");
 
     }
