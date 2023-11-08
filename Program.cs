@@ -222,6 +222,7 @@ void GetRandomCommand()
             if (key == command)
             {
                 WriteContentOfFile(value);
+                return;
             }
         }
     }
