@@ -1,33 +1,29 @@
-﻿using System.Collections.Generic;
+﻿using System.Text;
+using System.Net.Http;
+using System.Linq;
 using System.IO.Compression;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
+using System.Data;
 using System;
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-var pageLocation = $"{baseDirectory}{Path.DirectorySeparatorChar}tldr-2.0{Path.DirectorySeparatorChar}pages";
+var dataLocation = $"{baseDirectory}tldr-sharp.dat";
 
 if (args.Any())
     switch (args[0])
     {
         case "-v":
         case "--version":
-            Console.WriteLine("2311.06");
+            Console.WriteLine("2311.07");
             return;
         case "-l":
         case "--list":
-            CheckDownloadPagesZip();
-            GetListOfPlatformCommands();
-            break;
-        case "-la":
-        case "--list-all":
-            CheckDownloadPagesZip();
-            GetListOfCommands();
+            DownloadPagesZipDeflateContents();
+            ListCommands();
             break;
         case "-r":
         case "--random":
-            CheckDownloadPagesZip();
+            DownloadPagesZipDeflateContents();
             GetRandomCommand();
             break;
         case "-h":
@@ -35,7 +31,7 @@ if (args.Any())
             WriteHelp();
             break;
         default:
-            CheckDownloadPagesZip();
+            DownloadPagesZipDeflateContents();
             GetCommand(args[0]);
             break;
     }
@@ -64,31 +60,70 @@ void WriteHelp()
         """
         -v,  --version           Display Version
         -l,  --list              List all commands for current platform
-        -la, --list-all          List all commands for any platform
         -r,  --random            Show a random command
         -h,  --help              Show this information
         """);
     Console.Write("\n");
 }
 
-void GetCommand(string command)
+void DownloadPagesZipDeflateContents()
 {
-    BuildSearchCommandNames(command);
-}
-
-void CheckDownloadPagesZip()
-{
-    if (Directory.Exists(pageLocation)) return;
+    if (File.Exists(dataLocation)) return;
 
     try
     {
         const string url = "https://github.com/tldr-pages/tldr/archive/refs/tags/v2.0.zip";
         Console.WriteLine($"Downloading pages from {url} - file size: 5.8M");
         var client = new HttpClient();
-        var zipStream = client.GetStreamAsync(url).Result;
+        var httpStream = client.GetStreamAsync(url).Result;
 
-        using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
-        archive.ExtractToDirectory(baseDirectory);
+        using var archive = new ZipArchive(httpStream, ZipArchiveMode.Read);
+        using var memoryStream = new MemoryStream();
+        using var writer = new BinaryWriter(memoryStream, Encoding.UTF8, false);
+
+        var osPath = Environment.OSVersion.Platform switch
+        {
+            PlatformID.Unix => "linux",
+            PlatformID.MacOSX => "osx",
+            PlatformID.Other => "windows",
+            _ => "windows",
+        };
+
+        var pagePath = $"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}";
+        var commonEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}"));
+        var osEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}{osPath}{Path.DirectorySeparatorChar}"));
+        var entries = commonEntries.Concat(osEntries);
+
+        var keys = new StringBuilder();
+
+        foreach (var entry in entries)
+        {
+            var match = entry.FullName.LastIndexOf(Path.DirectorySeparatorChar) + 1;
+            var keyName = entry.FullName[match..].Replace(".md", string.Empty);
+
+            using var streamReader = new StreamReader(entry.Open());
+            string contents = streamReader.ReadToEnd();
+
+            keys.Append($"{keyName},");
+            writer.Write(keyName);
+            writer.Write(contents);
+        }
+
+        using var memoryHeadersStream = new MemoryStream();
+        using var writerHeaders = new BinaryWriter(memoryHeadersStream, Encoding.UTF8);
+        writerHeaders.Write(keys.ToString());
+
+        memoryStream.Position = 0;
+        memoryStream.CopyTo(memoryHeadersStream);
+        memoryStream.Dispose();
+
+        using var compressStream = File.Open(dataLocation, FileMode.Create);
+        using var compresser = new BrotliStream(compressStream, compressionLevel: CompressionLevel.Optimal);
+
+        memoryHeadersStream.Position = 0;
+        memoryHeadersStream.CopyTo(compresser);
+
+        compresser.Dispose();
         archive.Dispose();
     }
     catch (Exception ex)
@@ -97,169 +132,150 @@ void CheckDownloadPagesZip()
     }
 }
 
-void BuildSearchCommandNames(string commandName)
+void GetCommand(string commandName)
 {
-    var commandSearch = $"{commandName}.md";
+    using var dataFile = File.Open(dataLocation, FileMode.Open);
+    using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
+    using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
 
     try
     {
-        var commonPath = $"{pageLocation}{Path.DirectorySeparatorChar}common{Path.DirectorySeparatorChar}{commandSearch}";
-        WriteContentOfFile(commonPath);
-        return;
-    }
-    catch
-    {
-    }
+        var commandIndexes = reader.ReadString()
+            .Split(",")
+            .OrderBy(ci => ci);
 
-    try
-    {
-        switch (Environment.OSVersion.Platform)
+        if (!commandIndexes.Contains(commandName))
         {
-            case PlatformID.Unix:
-                var linuxPath = $"{pageLocation}{Path.DirectorySeparatorChar}linux{Path.DirectorySeparatorChar}{commandSearch}";
-                WriteContentOfFile(linuxPath);
-                break;
-            case PlatformID.MacOSX:
-                var osxPath = $"{pageLocation}{Path.DirectorySeparatorChar}osx{Path.DirectorySeparatorChar}{commandSearch}";
-                WriteContentOfFile(osxPath);
-                break;
-            case PlatformID.Other:
-            default:
-                var winPath = $"{pageLocation}{Path.DirectorySeparatorChar}windows{Path.DirectorySeparatorChar}{commandSearch}";
-                WriteContentOfFile(winPath);
-                break;
+            ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
+            Console.Write("not found \n");
+            return;
         }
+
+        while (true)
+        {
+            var key = reader.ReadString();
+            var value = reader.ReadString();
+
+            if (key == commandName)
+            {
+                WriteContentOfFile(value);
+                return;
+            }
+        }
+    }
+    catch (EndOfStreamException)
+    {
         return;
     }
-    catch
-    {
-    }
-
-    ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
-    Console.WriteLine("not found");
 }
 
-void GetListOfPlatformCommands()
+void ListCommands()
 {
-    var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.TopDirectoryOnly);
+    using var dataFile = File.Open(dataLocation, FileMode.Open);
+    using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
+    using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
 
-    IEnumerable<string> os;
-    switch (Environment.OSVersion.Platform)
+    try
     {
-        case PlatformID.Unix:
-            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}linux", "*.md", SearchOption.TopDirectoryOnly);
-            break;
-        case PlatformID.MacOSX:
-            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}osx", "*.md", SearchOption.TopDirectoryOnly);
-            break;
-        case PlatformID.Other:
-        default:
-            os = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}windows", "*.md", SearchOption.TopDirectoryOnly);
-            break;
-    }
+        var commandIndexes = reader.ReadString()
+            .Split(",")
+            .OrderBy(ci => ci)
+            .ToList();
 
-    var commandList = common.Concat(os).OrderBy(cl => cl);
-    foreach (var path in commandList)
+        var commandBuilder = new StringBuilder();
+        commandIndexes.ForEach(cmd =>
+        {
+            commandBuilder.Append($"{cmd},");
+        });
+
+        ConsoleEx.WriteColor(commandBuilder.ToString(), ConsoleColor.Yellow);
+        Console.Write("\n");
+
+    }
+    catch (EndOfStreamException)
     {
-        var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
-        var result = path[match..].Replace(".md", string.Empty);
-        ConsoleEx.WriteColor($"{result}, ", ConsoleColor.Yellow);
+        return;
     }
-    Console.Write("\n");
-}
-
-void GetListOfCommands()
-{
-    var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.TopDirectoryOnly);
-    var linux = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}linux", "*.md", SearchOption.TopDirectoryOnly);
-    var osx = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}osx", "*.md", SearchOption.TopDirectoryOnly);
-    var windows = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}windows", "*.md", SearchOption.TopDirectoryOnly);
-    var commandList = common.Concat(linux).Concat(osx).Concat(windows).OrderBy(cl => cl);
-
-    foreach (var path in commandList)
-    {
-        var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
-        var result = path[match..].Replace(".md", string.Empty);
-        ConsoleEx.WriteColor($"{result}, ", ConsoleColor.Yellow);
-    }
-    Console.Write("\n");
 }
 
 void GetRandomCommand()
 {
-    var common = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}common", "*.md", SearchOption.TopDirectoryOnly);
-    var linux = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}linux", "*.md", SearchOption.TopDirectoryOnly);
-    var osx = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}osx", "*.md", SearchOption.TopDirectoryOnly);
-    var windows = Directory.EnumerateFiles($"{pageLocation}{Path.DirectorySeparatorChar}windows", "*.md", SearchOption.TopDirectoryOnly);
-    var commandList = common.Concat(linux).Concat(osx).Concat(windows).ToList();
+    using var dataFile = File.Open(dataLocation, FileMode.Open);
+    using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
+    using var reader = new BinaryReader(decompressor, encoding: Encoding.UTF8, false);
 
-    var totalCommands = commandList.Count();
-    var random = new Random();
-    var randomIndex = random.Next(totalCommands);
+    try
+    {
+        var commandIndexes = reader.ReadString()
+            .Split(",")
+            .OrderBy(ci => ci)
+            .ToList();
 
-    var path = commandList[randomIndex];
+        var index = new Random().Next(commandIndexes.Count);
+        var command = commandIndexes[index];
 
-    var match = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
-    var result = path[match..].Replace(".md", string.Empty);
-    WriteContentOfFile(path);
+        while (true)
+        {
+            var key = reader.ReadString();
+            var value = reader.ReadString();
+
+            if (key == command)
+            {
+                WriteContentOfFile(value);
+                return;
+            }
+        }
+    }
+    catch (EndOfStreamException)
+    {
+        return;
+    }
 }
 
-void WriteContentOfFile(string filePath)
+void WriteContentOfFile(string value)
 {
-    using var filestream = new FileInfo(filePath).Open(FileMode.Open, FileAccess.Read);
-    using var streamReader = new StreamReader(filestream);
-
+    var bytes = Encoding.UTF8.GetBytes(value);
     var firstLine = true;
     var inCodeBlock = false;
-    while (filestream.CanRead)
+    for (int i = 0; i < value.Length; i++)
     {
-        var readByte = streamReader.Read();
-
-        switch (readByte)
+        var character = value[i];
+        switch (character)
         {
-            case -1: // EOF
-                streamReader.Close();
-                filestream.Close();
-                break;
-            case 10:
+            case (char)10:
                 firstLine = false;
-                ConsoleEx.Write(readByte);
+                ConsoleEx.Write(character);
                 break;
-            case 58: // :
-                ConsoleEx.Write(readByte);
-                if (streamReader.Peek() == 10)
-                {
-                    streamReader.Read();
-                }
+            case (char)58: // :
+                ConsoleEx.Write(character);
+                if (value[i + 1] == (char)10) i++;
                 break;
-            case 60: // <
-            case 62: // >
-                ConsoleEx.WriteColor(readByte, ConsoleColor.Red);
+            case (char)60: // <
+            case (char)62: // >
+                ConsoleEx.WriteColor(character, ConsoleColor.Red);
                 continue;
-            case 96: // `
+            case (char)96: // `
                 inCodeBlock ^= true;
-                ConsoleEx.WriteColor(readByte, ConsoleColor.DarkBlue);
+                ConsoleEx.WriteColor(character, ConsoleColor.DarkBlue);
                 break;
-            case 123: // {
-            case 125: // }
+            case (char)123: // {
+            case (char)125: // }
                 continue;
             default:
                 if (firstLine)
                 {
-                    ConsoleEx.WriteColor(readByte, ConsoleColor.Yellow);
+                    ConsoleEx.WriteColor(character, ConsoleColor.Yellow);
                     break;
                 }
                 if (inCodeBlock)
                 {
-                    ConsoleEx.WriteColor(readByte, ConsoleColor.DarkBlue);
+                    ConsoleEx.WriteColor(character, ConsoleColor.DarkBlue);
                     break;
                 }
-                ConsoleEx.Write(readByte);
+                ConsoleEx.Write(character);
                 break;
         }
     }
-
-    Console.Write("\n");
 }
 
 public static class ConsoleEx
