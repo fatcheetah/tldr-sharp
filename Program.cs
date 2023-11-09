@@ -1,11 +1,9 @@
-﻿using System.Text;
-using System.Net.Http;
-using System.Linq;
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.IO;
-using System.Data;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System;
-using System.Formats.Tar;
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 var dataLocation = $"{baseDirectory}tldr-sharp.dat";
