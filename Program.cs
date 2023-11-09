@@ -5,42 +5,114 @@ using System.IO.Compression;
 using System.IO;
 using System.Data;
 using System;
+using System.Formats.Tar;
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 var dataLocation = $"{baseDirectory}tldr-sharp.dat";
 
-if (args.Any())
-    switch (args[0])
-    {
-        case "-v":
-        case "--version":
-            Console.WriteLine("2311.07");
-            return;
-        case "-l":
-        case "--list":
-            DownloadPagesZipDeflateContents();
-            ListCommands();
-            break;
-        case "-r":
-        case "--random":
-            DownloadPagesZipDeflateContents();
-            GetRandomCommand();
-            break;
-        case "-h":
-        case "--help":
-            WriteHelp();
-            break;
-        default:
-            DownloadPagesZipDeflateContents();
-            GetCommand(args[0]);
-            break;
-    }
-else
+if (!args.Any())
 {
     WriteHelp();
+    return;
 }
 
+var arguments = args.Select(arg => arg.ToLower()).ToList();
+var cmdBuilder = new StringBuilder();
+var platform = string.Empty;
+
+for (var i = 0; i < arguments.Count; i++)
+{
+    var arg = arguments[i];
+
+    switch (arg)
+    {
+        case "-h" or "--help":
+            WriteHelp();
+            return;
+
+        case "-v" or "--version":
+            WriteVersion();
+            return;
+
+        case "-l" or "--list":
+            DownloadPagesZipDeflateContents();
+            ListCommands();
+            return;
+
+        case "-r" or "--random":
+            DownloadPagesZipDeflateContents();
+            GetRandomCommand();
+            return;
+
+        case "-p" or "--platform" when i == arguments.Count:
+            Console.WriteLine("platform not specified");
+            return;
+
+            // Platform
+            //
+            //     Clients MUST default to displaying the page associated with the platform on which the client is running. For example, a client running on Windows 11 will default to displaying pages from the windows platform. Clients MAY provide a user-configurable option to override this behaviour, however.
+            //
+            //     If a page is not available for the host platform, clients MUST fall back to the special common platform.
+            //
+            //     If a page is not available for either the host platform or the common platform, then clients SHOULD search other platforms and display a page from there - along with a warning message.
+            //
+            //     For example, a user has a client on Windows and requests the apt page. The client consults the platforms in the following order:
+            //
+            // windows - Not available
+            // common - Not available
+            // osx - Not available
+            // linux - Page found
+
+        
+        case "-p" or "--platform":
+        {
+            platform = arguments[i + 1] switch
+            {
+                "osx" or "macos" => "osx",
+                "windows" or "win" => "windows",
+                "linux" or "unix" => "linux",
+                _ => platform
+            };
+
+            i++;
+            break;
+        }
+
+        default:
+            cmdBuilder.Append($"-{arg}");
+            break;
+    }
+}
+
+if (cmdBuilder.Length != 0)
+{
+    var command = cmdBuilder.ToString()[1..];
+
+    if (platform != string.Empty)
+    {
+        Console.WriteLine($"{platform},{command}");
+    }
+    else
+    {
+        DownloadPagesZipDeflateContents();
+        GetCommand(command);
+    }
+
+    return;
+}
+
+WriteHelp();
 return;
+
+void WriteVersion()
+{
+    Console.WriteLine(
+        """
+        tldr-sharp 2311.09
+        client spec 2.0
+        """
+    );
+}
 
 void WriteHelp()
 {
@@ -49,21 +121,20 @@ void WriteHelp()
         """
         Display simple help pages for command-line tools from the tldr-pages project.
         More information: https://tldr.sh.
-        
+
         - Print the tldr page for a specific command
 
         """);
     ConsoleEx.WriteColor("`tldr-sharp ", ConsoleColor.DarkBlue);
     ConsoleEx.WriteColor("<command>", ConsoleColor.Yellow);
     ConsoleEx.WriteColor("`\n\n", ConsoleColor.DarkBlue);
-    Console.Write(
+    Console.WriteLine(
         """
-        -v,  --version           Display Version
+        -V,  --version           Display Version
         -l,  --list              List all commands for current platform
         -r,  --random            Show a random command
         -h,  --help              Show this information
         """);
-    Console.Write("\n");
 }
 
 void DownloadPagesZipDeflateContents()
@@ -118,12 +189,12 @@ void DownloadPagesZipDeflateContents()
         memoryStream.Dispose();
 
         using var compressStream = File.Open(dataLocation, FileMode.Create);
-        using var compresser = new BrotliStream(compressStream, compressionLevel: CompressionLevel.Optimal);
+        using var compressor = new BrotliStream(compressStream, compressionLevel: CompressionLevel.Optimal);
 
         memoryHeadersStream.Position = 0;
-        memoryHeadersStream.CopyTo(compresser);
+        memoryHeadersStream.CopyTo(compressor);
 
-        compresser.Dispose();
+        compressor.Dispose();
         archive.Dispose();
     }
     catch (Exception ex)
@@ -156,11 +227,10 @@ void GetCommand(string commandName)
             var key = reader.ReadString();
             var value = reader.ReadString();
 
-            if (key == commandName)
-            {
-                WriteContentOfFile(value);
-                return;
-            }
+            if (key != commandName) continue;
+
+            WriteContentOfFile(value);
+            return;
         }
     }
     catch (EndOfStreamException)
@@ -183,14 +253,10 @@ void ListCommands()
             .ToList();
 
         var commandBuilder = new StringBuilder();
-        commandIndexes.ForEach(cmd =>
-        {
-            commandBuilder.Append($"{cmd},");
-        });
+        commandIndexes.ForEach(cmd => { commandBuilder.Append($"{cmd},"); });
 
         ConsoleEx.WriteColor(commandBuilder.ToString(), ConsoleColor.Yellow);
         Console.Write("\n");
-
     }
     catch (EndOfStreamException)
     {
@@ -212,18 +278,17 @@ void GetRandomCommand()
             .ToList();
 
         var index = new Random().Next(commandIndexes.Count);
-        var command = commandIndexes[index];
+        var keyCommand = commandIndexes[index];
 
         while (true)
         {
             var key = reader.ReadString();
             var value = reader.ReadString();
 
-            if (key == command)
-            {
-                WriteContentOfFile(value);
-                return;
-            }
+            if (key != keyCommand) continue;
+
+            WriteContentOfFile(value);
+            return;
         }
     }
     catch (EndOfStreamException)
@@ -267,11 +332,13 @@ void WriteContentOfFile(string value)
                     ConsoleEx.WriteColor(character, ConsoleColor.Yellow);
                     break;
                 }
+
                 if (inCodeBlock)
                 {
                     ConsoleEx.WriteColor(character, ConsoleColor.DarkBlue);
                     break;
                 }
+
                 ConsoleEx.Write(character);
                 break;
         }
