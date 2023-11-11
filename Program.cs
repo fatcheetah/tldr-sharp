@@ -27,41 +27,37 @@ for (var i = 0; i < arguments.Count; i++)
         case "-h" or "--help":
             WriteHelp();
             return;
-
-        case "-v" or "--version":
+        case "-V" or "--version":
             WriteVersion();
             return;
-
         case "-l" or "--list":
             DownloadPagesZipDeflateContents();
             ListCommands();
             return;
-
         case "-r" or "--random":
             DownloadPagesZipDeflateContents();
             GetRandomCommand();
             return;
-
         case "-p" or "--platform" when i == arguments.Count:
             Console.WriteLine("platform not specified");
             return;
 
-            // Platform
-            //
-            //     Clients MUST default to displaying the page associated with the platform on which the client is running. For example, a client running on Windows 11 will default to displaying pages from the windows platform. Clients MAY provide a user-configurable option to override this behaviour, however.
-            //
-            //     If a page is not available for the host platform, clients MUST fall back to the special common platform.
-            //
-            //     If a page is not available for either the host platform or the common platform, then clients SHOULD search other platforms and display a page from there - along with a warning message.
-            //
-            //     For example, a user has a client on Windows and requests the apt page. The client consults the platforms in the following order:
-            //
-            // windows - Not available
-            // common - Not available
-            // osx - Not available
-            // linux - Page found
+        // Platform
+        //
+        //     Clients MUST default to displaying the page associated with the platform on which the client is running. For example, a client running on Windows 11 will default to displaying pages from the windows platform. Clients MAY provide a user-configurable option to override this behaviour, however.
+        //
+        //     If a page is not available for the host platform, clients MUST fall back to the special common platform.
+        //
+        //     If a page is not available for either the host platform or the common platform, then clients SHOULD search other platforms and display a page from there - along with a warning message.
+        //
+        //     For example, a user has a client on Windows and requests the apt page. The client consults the platforms in the following order:
+        //
+        // windows - Not available
+        // common - Not available
+        // osx - Not available
+        // linux - Page found
 
-        
+
         case "-p" or "--platform":
         {
             platform = arguments[i + 1] switch
@@ -159,21 +155,30 @@ void DownloadPagesZipDeflateContents()
         };
 
         var pagePath = $"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}";
+
         var commonEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}"));
-        var osEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}{osPath}{Path.DirectorySeparatorChar}"));
-        var entries = commonEntries.Concat(osEntries);
+        var linuxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}linux{Path.DirectorySeparatorChar}"));
+        var osxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}osx{Path.DirectorySeparatorChar}"));
+        var windowsEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}windows{Path.DirectorySeparatorChar}"));
+
+        // fix the order of this relevant to current OS in use
+        var entries = commonEntries.Concat(linuxEntries).Concat(osxEntries).Concat(windowsEntries);
 
         var keys = new StringBuilder();
 
         foreach (var entry in entries)
         {
             var match = entry.FullName.LastIndexOf(Path.DirectorySeparatorChar) + 1;
+            var osName = entry.FullName.LastIndexOf(Path.DirectorySeparatorChar);
+            Console.WriteLine(entry.FullName);
+            Console.WriteLine(osName);
+            
             var keyName = entry.FullName[match..].Replace(".md", string.Empty);
 
             using var streamReader = new StreamReader(entry.Open());
             string contents = streamReader.ReadToEnd();
 
-            keys.Append($"{keyName},");
+            keys.Append($"{keyName}:{osName},");
             writer.Write(keyName);
             writer.Write(contents);
         }
@@ -225,11 +230,12 @@ void GetCommand(string commandName)
             var key = reader.ReadString();
             var value = reader.ReadString();
 
-            if (key != commandName) continue;
-
-            WriteContentOfFile(value);
-            return;
-        }
+            if (key == commandName)
+            {
+                WriteContentOfFile(value);
+                return;
+            }
+        }  
     }
     catch (EndOfStreamException)
     {
@@ -276,17 +282,18 @@ void GetRandomCommand()
             .ToList();
 
         var index = new Random().Next(commandIndexes.Count);
-        var keyCommand = commandIndexes[index];
+        var command = commandIndexes[index];
 
         while (true)
         {
             var key = reader.ReadString();
             var value = reader.ReadString();
 
-            if (key != keyCommand) continue;
-
-            WriteContentOfFile(value);
-            return;
+            if (key == command)
+            {
+                WriteContentOfFile(value);
+                return;
+            }
         }
     }
     catch (EndOfStreamException)
