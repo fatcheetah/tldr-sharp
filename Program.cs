@@ -49,6 +49,7 @@ for (var i = 0; i < arguments.Count; i++)
                 "osx" or "macos" => "osx",
                 "windows" or "win" => "windows",
                 "linux" or "unix" => "linux",
+                "common" => "common",
                 _ => platform
             };
 
@@ -111,7 +112,7 @@ void WriteHelp()
         -V,  --version           Display Version
         -l,  --list              List all commands for current platform
         -r,  --random            Show a random command
-        -p,  --platform          Specify platform pages to be used [linux, osx, windows]
+        -p,  --platform          Specify platform pages to be used [linux, osx, windows, common]
         -h,  --help              Show this information
         """);
 }
