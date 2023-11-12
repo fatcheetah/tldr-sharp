@@ -156,28 +156,33 @@ void DownloadPagesZipDeflateContents()
 
         var pagePath = $"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}";
 
-        var commonEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
-        var linuxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}linux{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
-        var osxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}osx{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
-        var windowsEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}windows{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+        var commonEntries = archive.Entries
+            .Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+        var linuxEntries = archive.Entries
+            .Where(e => e.FullName.StartsWith($"{pagePath}linux{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+        var osxEntries = archive.Entries
+            .Where(e => e.FullName.StartsWith($"{pagePath}osx{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+        var windowsEntries = archive.Entries
+            .Where(e => e.FullName.StartsWith($"{pagePath}windows{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
 
         // fix the order of this relevant to current OS in use
-        var entries = commonEntries.Concat(linuxEntries).Concat(osxEntries).Concat(windowsEntries);
+        var entries = commonEntries
+            .Concat(linuxEntries).Concat(osxEntries).Concat(windowsEntries)
+            .Select(e => new {
+                    Zip = e.Open(),
+                    Command = e.FullName[(e.FullName.LastIndexOf(Path.DirectorySeparatorChar) + 1)..].Replace(".md", string.Empty),
+                    Platform = e.FullName[..(e.FullName.LastIndexOf(Path.DirectorySeparatorChar))][15..]
+            });
 
         var keys = new StringBuilder();
         var keyPosition = 0;
 
         foreach (var entry in entries)
         {
-            var entryValue = entry.FullName[15..];
-            var seperator = entryValue.LastIndexOf(Path.DirectorySeparatorChar);
-            var command = entryValue[(seperator + 1)..].Replace(".md", string.Empty);
-            var platform = entryValue[..seperator];
-
-            using var streamReader = new StreamReader(entry.Open());
+            using var streamReader = new StreamReader(entry.Zip);
             string contents = streamReader.ReadToEnd();
 
-            keys.Append($"{command} {platform} {keyPosition},");
+            keys.Append($"{entry.Command} {entry.Platform} {keyPosition},");
             writer.Write(contents);
 
             keyPosition++;
