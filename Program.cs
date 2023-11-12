@@ -38,26 +38,10 @@ for (var i = 0; i < arguments.Count; i++)
             DownloadPagesZipDeflateContents();
             GetRandomCommand();
             return;
-        case "-p" or "--platform" when i == arguments.Count:
-            Console.WriteLine("platform not specified");
+        case "-p" or "--platform" when i + 1 == arguments.Count:
+            Console.WriteLine("Could not find a platform specified");
+            Console.WriteLine("Look at --help for more information");
             return;
-
-        // Platform
-        //
-        //     Clients MUST default to displaying the page associated with the platform on which the client is running. For example, a client running on Windows 11 will default to displaying pages from the windows platform. Clients MAY provide a user-configurable option to override this behaviour, however.
-        //
-        //     If a page is not available for the host platform, clients MUST fall back to the special common platform.
-        //
-        //     If a page is not available for either the host platform or the common platform, then clients SHOULD search other platforms and display a page from there - along with a warning message.
-        //
-        //     For example, a user has a client on Windows and requests the apt page. The client consults the platforms in the following order:
-        //
-        // windows - Not available
-        // common - Not available
-        // osx - Not available
-        // linux - Page found
-
-
         case "-p" or "--platform":
         {
             platform = arguments[i + 1] switch
@@ -80,15 +64,15 @@ for (var i = 0; i < arguments.Count; i++)
 
 if (cmdBuilder.Length != 0)
 {
+    DownloadPagesZipDeflateContents();
     var command = cmdBuilder.ToString()[1..];
 
     if (platform != string.Empty)
     {
-        Console.WriteLine($"{platform},{command}");
+        GetCommand(command, platform);
     }
     else
     {
-        DownloadPagesZipDeflateContents();
         GetCommand(command);
     }
 
@@ -102,7 +86,7 @@ void WriteVersion()
 {
     Console.WriteLine(
         """
-        tldr-sharp 2311.09
+        tldr-sharp 2311.12
         client spec 2.0
         """
     );
@@ -120,13 +104,14 @@ void WriteHelp()
 
         """);
     ConsoleEx.WriteColor("`tldr-sharp ", ConsoleColor.DarkBlue);
-    ConsoleEx.WriteColor("<command>", ConsoleColor.Yellow);
+    ConsoleEx.WriteColor("command", ConsoleColor.Yellow);
     ConsoleEx.WriteColor("`\n\n", ConsoleColor.DarkBlue);
     Console.WriteLine(
         """
         -V,  --version           Display Version
         -l,  --list              List all commands for current platform
         -r,  --random            Show a random command
+        -p,  --platform          Specify platform pages to be used [linux, osx, windows]
         -h,  --help              Show this information
         """);
 }
@@ -151,19 +136,19 @@ void DownloadPagesZipDeflateContents()
             PlatformID.Unix => "linux",
             PlatformID.MacOSX => "osx",
             PlatformID.Other => "windows",
-            _ => "windows",
+            _ => "linux",
         };
 
         var pagePath = $"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}";
 
         var commonEntries = archive.Entries
-            .Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+            .Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}"));
         var linuxEntries = archive.Entries
-            .Where(e => e.FullName.StartsWith($"{pagePath}linux{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+            .Where(e => e.FullName.StartsWith($"{pagePath}linux{Path.DirectorySeparatorChar}"));
         var osxEntries = archive.Entries
-            .Where(e => e.FullName.StartsWith($"{pagePath}osx{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+            .Where(e => e.FullName.StartsWith($"{pagePath}osx{Path.DirectorySeparatorChar}"));
         var windowsEntries = archive.Entries
-            .Where(e => e.FullName.StartsWith($"{pagePath}windows{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+            .Where(e => e.FullName.StartsWith($"{pagePath}windows{Path.DirectorySeparatorChar}"));
 
         // fix the order of this relevant to current OS in use
         var entries = commonEntries
@@ -172,7 +157,9 @@ void DownloadPagesZipDeflateContents()
                     Zip = e.Open(),
                     Command = e.FullName[(e.FullName.LastIndexOf(Path.DirectorySeparatorChar) + 1)..].Replace(".md", string.Empty),
                     Platform = e.FullName[..(e.FullName.LastIndexOf(Path.DirectorySeparatorChar))][15..]
-            });
+            })
+            .OrderByDescending(e => e.Platform == osPath)
+            .ThenByDescending(e => e.Platform == "common");
 
         var keys = new StringBuilder();
         var keyPosition = 0;
@@ -181,7 +168,8 @@ void DownloadPagesZipDeflateContents()
         {
             using var streamReader = new StreamReader(entry.Zip);
             string contents = streamReader.ReadToEnd();
-
+            
+            Console.WriteLine($"{entry.Command} {entry.Platform} {keyPosition} ");
             keys.Append($"{entry.Command} {entry.Platform} {keyPosition},");
             writer.Write(contents);
 
@@ -211,7 +199,7 @@ void DownloadPagesZipDeflateContents()
     }
 }
 
-void GetCommand(string commandName)
+void GetCommand(string commandName, string platformName = "")
 {
     using var dataFile = File.Open(dataLocation, FileMode.Open);
     using var decompressor = new BrotliStream(dataFile, CompressionMode.Decompress);
@@ -220,16 +208,30 @@ void GetCommand(string commandName)
     try
     {
         var headerItems = reader.ReadString()
-            .Split(",")
-            .OrderBy(ci => ci)
+            .Split(",", StringSplitOptions.RemoveEmptyEntries)
             .Select(ci => new
             {
-                Command = ci.Split().First(),
-                ToSkip = ci.Split().Last(),
+                Command = ci.Split()[0],
+                Platform = ci.Split()[1],
+                ToSkip = ci.Split()[2],
             })
             .ToList();
 
-        var position = int.Parse(headerItems.First(hi => hi.Command == commandName).ToSkip);
+        var items = headerItems.Where(hi => hi.Command == commandName);
+
+        if (!string.IsNullOrEmpty(platformName)) 
+        {
+            items = items.Where(hi => hi.Platform == platform);
+        }
+
+        if (!items.Any()) 
+        {
+            ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
+            Console.Write("not found \n");
+            return;
+        }
+
+        var position = int.Parse(items.First().ToSkip);
 
         for (var i = 0; i < position; i++)
         {
@@ -238,6 +240,14 @@ void GetCommand(string commandName)
 
         var contents = reader.ReadString();
         WriteContentOfFile(contents);
+
+        if (items.Count() > 1 && string.IsNullOrEmpty(platformName)) 
+        { 
+            Console.Write("\n");
+            items.ToList().ForEach(i => { 
+                ConsoleEx.WriteColor($"[i] page found for platform {i.Platform} \n", ConsoleColor.DarkMagenta); 
+            });
+        }
     }
     catch (EndOfStreamException)
     {
@@ -254,11 +264,11 @@ void ListCommands()
     try
     {
         var commandIndexes = reader.ReadString()
-            .Split(",")
+            .Split(",", StringSplitOptions.RemoveEmptyEntries)
             .OrderBy(ci => ci)
             .Select(ci => new
             {
-                Command = ci.Split().First(),
+                Command = ci.Split()[0]
             })
             .ToList();
 
@@ -283,11 +293,11 @@ void GetRandomCommand()
     try
     {
         var headerItems = reader.ReadString()
-            .Split(",")
+            .Split(",", StringSplitOptions.RemoveEmptyEntries)
             .OrderBy(ci => ci)
             .Select(ci => new
             {
-                ToSkip = ci.Split().Last(),
+                ToSkip = ci.Split()[2]
             })
             .ToList();
 
