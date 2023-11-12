@@ -156,31 +156,31 @@ void DownloadPagesZipDeflateContents()
 
         var pagePath = $"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}";
 
-        var commonEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}"));
-        var linuxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}linux{Path.DirectorySeparatorChar}"));
-        var osxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}osx{Path.DirectorySeparatorChar}"));
-        var windowsEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}windows{Path.DirectorySeparatorChar}"));
+        var commonEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+        var linuxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}linux{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+        var osxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}osx{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
+        var windowsEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}windows{Path.DirectorySeparatorChar}") && e.FullName.EndsWith(".md"));
 
         // fix the order of this relevant to current OS in use
         var entries = commonEntries.Concat(linuxEntries).Concat(osxEntries).Concat(windowsEntries);
 
         var keys = new StringBuilder();
+        var keyPosition = 0;
 
         foreach (var entry in entries)
         {
-            var match = entry.FullName.LastIndexOf(Path.DirectorySeparatorChar) + 1;
-            var osName = entry.FullName.LastIndexOf(Path.DirectorySeparatorChar);
-            Console.WriteLine(entry.FullName);
-            Console.WriteLine(osName);
-            
-            var keyName = entry.FullName[match..].Replace(".md", string.Empty);
+            var entryValue = entry.FullName[15..];
+            var seperator = entryValue.LastIndexOf(Path.DirectorySeparatorChar);
+            var command = entryValue[(seperator + 1)..].Replace(".md", string.Empty);
+            var platform = entryValue[..seperator];
 
             using var streamReader = new StreamReader(entry.Open());
             string contents = streamReader.ReadToEnd();
 
-            keys.Append($"{keyName}:{osName},");
-            writer.Write(keyName);
+            keys.Append($"{command} {platform} {keyPosition},");
             writer.Write(contents);
+
+            keyPosition++;
         }
 
         using var memoryHeadersStream = new MemoryStream();
@@ -214,28 +214,25 @@ void GetCommand(string commandName)
 
     try
     {
-        var commandIndexes = reader.ReadString()
+        var headerItems = reader.ReadString()
             .Split(",")
-            .OrderBy(ci => ci);
+            .OrderBy(ci => ci)
+            .Select(ci => new
+            {
+                Command = ci.Split().First(),
+                ToSkip = ci.Split().Last(),
+            })
+            .ToList();
 
-        if (!commandIndexes.Contains(commandName))
+        var position = int.Parse(headerItems.First(hi => hi.Command == commandName).ToSkip);
+
+        for (var i = 0; i < position; i++)
         {
-            ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
-            Console.Write("not found \n");
-            return;
+            reader.ReadString();
         }
 
-        while (true)
-        {
-            var key = reader.ReadString();
-            var value = reader.ReadString();
-
-            if (key == commandName)
-            {
-                WriteContentOfFile(value);
-                return;
-            }
-        }  
+        var contents = reader.ReadString();
+        WriteContentOfFile(contents);
     }
     catch (EndOfStreamException)
     {
@@ -254,10 +251,14 @@ void ListCommands()
         var commandIndexes = reader.ReadString()
             .Split(",")
             .OrderBy(ci => ci)
+            .Select(ci => new
+            {
+                Command = ci.Split().First(),
+            })
             .ToList();
 
         var commandBuilder = new StringBuilder();
-        commandIndexes.ForEach(cmd => { commandBuilder.Append($"{cmd},"); });
+        commandIndexes.ForEach(cmd => { commandBuilder.Append($"{cmd.Command},"); });
 
         ConsoleEx.WriteColor(commandBuilder.ToString(), ConsoleColor.Yellow);
         Console.Write("\n");
@@ -276,25 +277,26 @@ void GetRandomCommand()
 
     try
     {
-        var commandIndexes = reader.ReadString()
+        var headerItems = reader.ReadString()
             .Split(",")
             .OrderBy(ci => ci)
+            .Select(ci => new
+            {
+                ToSkip = ci.Split().Last(),
+            })
             .ToList();
 
-        var index = new Random().Next(commandIndexes.Count);
-        var command = commandIndexes[index];
+        var index = new Random().Next(headerItems.Count);
+        var command = headerItems[index];
+        var position = int.Parse(command.ToSkip);
 
-        while (true)
+        for (var i = 0; i < position; i++)
         {
-            var key = reader.ReadString();
-            var value = reader.ReadString();
-
-            if (key == command)
-            {
-                WriteContentOfFile(value);
-                return;
-            }
+            reader.ReadString();
         }
+
+        var contents = reader.ReadString();
+        WriteContentOfFile(contents);
     }
     catch (EndOfStreamException)
     {
