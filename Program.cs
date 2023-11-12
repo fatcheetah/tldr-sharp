@@ -140,7 +140,6 @@ void DownloadPagesZipDeflateContents()
         };
 
         var pagePath = $"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}";
-
         var commonEntries = archive.Entries
             .Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}"));
         var linuxEntries = archive.Entries
@@ -169,7 +168,6 @@ void DownloadPagesZipDeflateContents()
             using var streamReader = new StreamReader(entry.Zip);
             string contents = streamReader.ReadToEnd();
             
-            Console.WriteLine($"{entry.Command} {entry.Platform} {keyPosition} ");
             keys.Append($"{entry.Command} {entry.Platform} {keyPosition},");
             writer.Write(contents);
 
@@ -232,7 +230,6 @@ void GetCommand(string commandName, string platformName = "")
         }
 
         var position = int.Parse(items.First().ToSkip);
-
         for (var i = 0; i < position; i++)
         {
             reader.ReadString();
@@ -244,9 +241,8 @@ void GetCommand(string commandName, string platformName = "")
         if (items.Count() > 1 && string.IsNullOrEmpty(platformName)) 
         { 
             Console.Write("\n");
-            items.ToList().ForEach(i => { 
-                ConsoleEx.WriteColor($"[i] page found for platform {i.Platform} \n", ConsoleColor.DarkMagenta); 
-            });
+            items.ToList()
+                .ForEach(i => { ConsoleEx.WriteColor($"[i] page found for platform {i.Platform} \n", ConsoleColor.DarkMagenta); });
         }
     }
     catch (EndOfStreamException)
