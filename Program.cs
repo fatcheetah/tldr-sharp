@@ -137,26 +137,22 @@ void DownloadPagesZipDeflateContents()
             PlatformID.Unix => "linux",
             PlatformID.MacOSX => "osx",
             PlatformID.Other => "windows",
-            _ => "linux",
+            _ => "windows",
         };
 
-        var pagePath = $"tldr-2.0{Path.DirectorySeparatorChar}pages{Path.DirectorySeparatorChar}";
-        var commonEntries = archive.Entries
-            .Where(e => e.FullName.StartsWith($"{pagePath}common{Path.DirectorySeparatorChar}"));
-        var linuxEntries = archive.Entries
-            .Where(e => e.FullName.StartsWith($"{pagePath}linux{Path.DirectorySeparatorChar}"));
-        var osxEntries = archive.Entries
-            .Where(e => e.FullName.StartsWith($"{pagePath}osx{Path.DirectorySeparatorChar}"));
-        var windowsEntries = archive.Entries
-            .Where(e => e.FullName.StartsWith($"{pagePath}windows{Path.DirectorySeparatorChar}"));
+        var pagePath = "tldr-2.0/pages/";
+        var commonEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}common/"));
+        var linuxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}linux/"));
+        var osxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}osx/"));
+        var windowsEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}windows/"));
 
         // fix the order of this relevant to current OS in use
         var entries = commonEntries
             .Concat(linuxEntries).Concat(osxEntries).Concat(windowsEntries)
             .Select(e => new {
                     Zip = e.Open(),
-                    Command = e.FullName[(e.FullName.LastIndexOf(Path.DirectorySeparatorChar) + 1)..].Replace(".md", string.Empty),
-                    Platform = e.FullName[..(e.FullName.LastIndexOf(Path.DirectorySeparatorChar))][15..]
+                    Command = e.FullName[(e.FullName.LastIndexOf("/", StringComparison.Ordinal) + 1)..].Replace(".md", string.Empty),
+                    Platform = e.FullName[..(e.FullName.LastIndexOf("/", StringComparison.Ordinal))][15..]
             })
             .OrderByDescending(e => e.Platform == osPath)
             .ThenByDescending(e => e.Platform == "common");
@@ -167,7 +163,7 @@ void DownloadPagesZipDeflateContents()
         foreach (var entry in entries)
         {
             using var streamReader = new StreamReader(entry.Zip);
-            string contents = streamReader.ReadToEnd();
+            var contents = streamReader.ReadToEnd();
             
             keys.Append($"{entry.Command} {entry.Platform} {keyPosition},");
             writer.Write(contents);
