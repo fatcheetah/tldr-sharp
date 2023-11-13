@@ -219,6 +219,8 @@ void GetCommand(string commandName, string platformName = "")
             items = items.Where(hi => hi.Platform == platform);
         }
 
+        items = items.ToList();
+
         if (!items.Any()) 
         {
             ConsoleEx.WriteColor($"{commandName} ", ConsoleColor.Yellow);
@@ -244,7 +246,6 @@ void GetCommand(string commandName, string platformName = "")
     }
     catch (EndOfStreamException)
     {
-        return;
     }
 }
 
@@ -273,7 +274,6 @@ void ListCommands()
     }
     catch (EndOfStreamException)
     {
-        return;
     }
 }
 
@@ -308,13 +308,11 @@ void GetRandomCommand()
     }
     catch (EndOfStreamException)
     {
-        return;
     }
 }
 
 void WriteContentOfFile(string value)
 {
-    var bytes = Encoding.UTF8.GetBytes(value);
     var firstLine = true;
     var inCodeBlock = false;
     for (int i = 0; i < value.Length; i++)
@@ -379,16 +377,5 @@ public static class ConsoleEx
         Console.ForegroundColor = foregroundColor;
         Console.Write(write);
         Console.ResetColor();
-    }
-
-    public static void ColorToggle(ConsoleColor foregroundColor)
-    {
-        if (Console.ForegroundColor == foregroundColor)
-        {
-            Console.ResetColor();
-            return;
-        }
-
-        Console.ForegroundColor = foregroundColor;
     }
 }
