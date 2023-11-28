@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>tldr_sharp</RootNamespace>
 <!-- disable implicit for build compatibility with flattened.net -->
     <ImplicitUsings>disable</ImplicitUsings>
