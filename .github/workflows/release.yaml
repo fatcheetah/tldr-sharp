@@ -11,7 +11,7 @@ env:
 jobs:
   tagged-release:
     name: "Release"
-    runs-on: "ubunutu-latest"
+    runs-on: "ubuntu-latest"
 
     steps:
       - name: "Checkout source"
