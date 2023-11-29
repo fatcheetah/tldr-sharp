@@ -33,5 +33,5 @@ jobs:
         with:
           body: Automated Released via GitHub Actions
           files:
-            ./tldr/tldr-sharp
+            /home/runner/work/tldr-sharp/tldr-sharp/publish/tldr-sharp
 
