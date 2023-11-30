@@ -8,9 +8,6 @@ on:
 permissions:
   contents: write
 
-env:
-  DOTNET_VERSION: '8.0.x'
-
 jobs:
   tagged-release:
     name: "Release"
@@ -21,20 +18,31 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: "Setup .NET"
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: Install dependencies
-        run: dotnet restore
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-      - name: Publish
-        run: dotnet publish -c release -o publish
+
+      - name: "Setup bflattened"
+        run: |
+          wget https://github.com/bflattened/bflat/releases/download/v7.0.2/bflat-7.0.2-linux-glibc-x64.tar.gz
+          mkdir bflat
+          tar xf bflat-7.0.2-linux-glibc-x64.tar.gz --directory=bflat
+        shell: bash
+
+      - name: "Build Linux"
+        run: ./bflat/bflat build Program.cs --os:linux --no-stacktrace-data --no-globalization --no-exception-messages -Ot --no-pie --separate-symbols -o tldr-sharp.elf
+
+      - name: "Build Windows"
+        run: ./bflat/bflat build Program.cs --os:windows --no-stacktrace-data --no-globalization --no-exception-messages -Ot --no-pie --separate-symbols -o tldr-sharp.exe
+
+      - name: "check files"
+        run: ls -l
+        shell: bash
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          body: Automated Released via GitHub Actions
-          files:
-            /home/runner/work/tldr-sharp/tldr-sharp/publish/tldr-sharp
+          body: |
+            Automated Released via GitHub Actions
+            > Built using `https://flattened.net/` optimised for speed
+          files: |
+            /home/runner/work/tldr-sharp/tldr-sharp/tldr-sharp.exe
+            /home/runner/work/tldr-sharp/tldr-sharp/tldr-sharp.elf
 
