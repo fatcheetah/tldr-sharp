@@ -87,7 +87,7 @@ void WriteVersion()
 {
     Console.WriteLine(
         """
-        tldr-sharp 2311.12
+        tldr-sharp 2312.26
         client spec 2.0
         """
     );
@@ -123,8 +123,8 @@ void DownloadPagesZipDeflateContents()
 
     try
     {
-        const string url = "https://github.com/tldr-pages/tldr/archive/refs/tags/v2.0.zip";
-        Console.WriteLine($"Downloading pages from {url} - file size: 5.8M");
+        const string url = "https://github.com/tldr-pages/tldr/archive/refs/tags/v2.1.zip";
+        Console.WriteLine($"Downloading pages from {url} - file size: 6.7M");
         var client = new HttpClient();
         var httpStream = client.GetStreamAsync(url).Result;
 
@@ -140,7 +140,7 @@ void DownloadPagesZipDeflateContents()
             _ => "windows",
         };
 
-        var pagePath = "tldr-2.0/pages/";
+        var pagePath = "tldr-2.1/pages/";
         var commonEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}common/"));
         var linuxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}linux/"));
         var osxEntries = archive.Entries.Where(e => e.FullName.StartsWith($"{pagePath}osx/"));
